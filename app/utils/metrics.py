@@ -68,6 +68,10 @@ def evaluate_retrieval(
         len(query_embeddings), len(gallery_embeddings), k_values,
     )
 
+    if len(gallery_embeddings) == 0:
+        logger.warning("Empty gallery set — returning zero recall")
+        return {f"recall_at_{k}": 0.0 for k in k_values}
+
     distances = compute_pairwise_distances(query_embeddings, gallery_embeddings)
 
     max_k = max(k_values)

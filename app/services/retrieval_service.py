@@ -36,6 +36,10 @@ class RetrievalService:
 
         embedding = self.model_service.extract_embedding(image_tensor)
 
+        if self.faiss_service.index_size == 0:
+            logger.warning("FAISS index is empty — returning empty results")
+            return []
+
         search_k = min(k * 5, self.faiss_service.index_size)
         raw_results = self.faiss_service.search_with_ids(embedding, top_k=search_k)
 

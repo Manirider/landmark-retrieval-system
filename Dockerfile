@@ -26,6 +26,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Stage 2: Production image
 FROM python:3.11-slim AS production
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libgomp1 \
+        && rm -rf /var/lib/apt/lists/*
+
 # Security: Create non-root user
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash appuser

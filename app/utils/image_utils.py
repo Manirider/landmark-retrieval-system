@@ -40,15 +40,18 @@ def load_image(source: Union[str, Path, bytes, BytesIO]) -> Image.Image:
             path = Path(source)
             if not path.exists():
                 raise FileNotFoundError(f"Image not found: {path}")
-            image = Image.open(path)
+            with Image.open(path) as img:
+                image = img.convert("RGB")
         elif isinstance(source, bytes):
-            image = Image.open(BytesIO(source))
+            with Image.open(BytesIO(source)) as img:
+                image = img.convert("RGB")
         elif isinstance(source, BytesIO):
-            image = Image.open(source)
+            with Image.open(source) as img:
+                image = img.convert("RGB")
         else:
             raise ValueError(f"Unsupported source type: {type(source)}")
 
-        return image.convert("RGB")
+        return image
 
     except (OSError, IOError) as e:
         raise ValueError(f"Failed to decode image: {e}") from e

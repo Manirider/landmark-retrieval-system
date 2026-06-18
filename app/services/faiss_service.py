@@ -64,7 +64,7 @@ class FAISSService:
 
         results = []
         for dist, idx in zip(distances[0], indices[0]):
-            if idx == -1:
+            if idx < 0 or idx >= len(self.id_mapping):
                 continue
 
             landmark_id = str(self.id_mapping[idx])
