@@ -1,0 +1,46 @@
+# ===========================================================================
+# Landmark Retrieval System — Docker Compose Configuration
+# ===========================================================================
+# Production deployment with health checks, restart policies, and volumes.
+#
+# Quick start:
+#   docker-compose up --build -d
+#
+# Verify:
+#   curl http://localhost:8000/health
+# ===========================================================================
+
+services:
+  landmark-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: landmark-retrieval-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - MODEL_PATH=artifacts/model.pth
+      - INDEX_PATH=artifacts/landmarks.index
+      - ID_MAPPING_PATH=artifacts/id_mapping.npy
+      - LANDMARK_MAP_PATH=data/landmark_map.json
+      - TOP_K=5
+      - EMBEDDING_DIM=128
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+      - ./data:/app/data:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
