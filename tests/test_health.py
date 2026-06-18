@@ -53,3 +53,13 @@ class TestHealthEndpoint:
     def test_health_method_not_allowed(self, client):
         response = client.post("/health")
         assert response.status_code == 405
+
+    def test_health_uninitialized_returns_503(self):
+        from app.main import create_app
+        app = create_app()
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+        response = client.get("/health")
+        assert response.status_code == 503
+        data = response.json()
+        assert "uninitialized" in data["detail"]

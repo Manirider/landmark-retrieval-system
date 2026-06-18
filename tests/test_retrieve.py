@@ -141,3 +141,11 @@ class TestRetrieveEndpoint:
     def test_retrieve_get_not_allowed(self, client):
         response = client.get("/retrieve")
         assert response.status_code == 405
+
+    def test_retrieve_payload_too_large(self, client):
+        large_bytes = b"0" * (10 * 1024 * 1024 + 1)
+        response = client.post(
+            "/retrieve",
+            files={"image": ("large.jpg", large_bytes, "image/jpeg")},
+        )
+        assert response.status_code == 413
