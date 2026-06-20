@@ -13,6 +13,10 @@ class Settings(BaseSettings):
         default="artifacts/model.pth",
         description="Path to the trained model checkpoint",
     )
+    model_backbone: str = Field(
+        default="efficientnet_b3",
+        description="Backbone network architecture",
+    )
     index_path: str = Field(
         default="artifacts/landmarks.index",
         description="Path to the FAISS index file",

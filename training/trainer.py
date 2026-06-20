@@ -9,17 +9,54 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from loguru import logger
 
-from app.models.mobilenet_embedding import MobileNetEmbedding
+from app.models.mobilenet_embedding import LandmarkEmbedding
 from app.models.triplet_loss import TripletLoss
 from training.datasets import TripletDataset, LandmarkDataset
 from training.samplers import BalancedBatchSampler
 from training.hard_negative_mining import mine_hard_triplets
 
 
+def cutmix_batch(images: torch.Tensor, lam_min: float = 0.4, lam_max: float = 0.6) -> torch.Tensor:
+    """Apply CutMix augmentation: paste a random rectangular region from a
+    shuffled version of the batch onto the original images.
+
+    Args:
+        images: batch of images (B, C, H, W)
+        lam_min: minimum lambda (proportion of image to keep)
+        lam_max: maximum lambda
+
+    Returns:
+        augmented batch of images
+    """
+    batch_size, _, h, w = images.size()
+    lam = torch.empty(1).uniform_(lam_min, lam_max).item()
+
+    # Random shuffle indices
+    indices = torch.randperm(batch_size, device=images.device)
+
+    # Compute cut region
+    cut_ratio = (1.0 - lam) ** 0.5
+    cut_h = int(h * cut_ratio)
+    cut_w = int(w * cut_ratio)
+
+    cy = torch.randint(0, h, (1,)).item()
+    cx = torch.randint(0, w, (1,)).item()
+
+    y1 = max(0, cy - cut_h // 2)
+    y2 = min(h, cy + cut_h // 2)
+    x1 = max(0, cx - cut_w // 2)
+    x2 = min(w, cx + cut_w // 2)
+
+    mixed = images.clone()
+    mixed[:, :, y1:y2, x1:x2] = images[indices, :, y1:y2, x1:x2]
+
+    return mixed
+
+
 class Trainer:
     def __init__(
         self,
-        model: MobileNetEmbedding,
+        model: LandmarkEmbedding,
         train_dir: str,
         strategy: str = "random",
         epochs: int = 20,
@@ -28,6 +65,7 @@ class Trainer:
         margin: float = 0.3,
         embedding_dim: int = 128,
         save_dir: str = "artifacts",
+        cutmix_prob: float = 0.3,
         device: Optional[torch.device] = None,
     ) -> None:
         self.model = model
@@ -39,6 +77,7 @@ class Trainer:
         self.margin = margin
         self.embedding_dim = embedding_dim
         self.save_dir = Path(save_dir)
+        self.cutmix_prob = cutmix_prob
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.model = self.model.to(self.device)
@@ -46,7 +85,7 @@ class Trainer:
         self.criterion = TripletLoss(margin=margin)
 
         self.optimizer = Adam(
-            self.model.parameters(),
+            filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=learning_rate,
             weight_decay=1e-4,
         )
@@ -63,8 +102,8 @@ class Trainer:
 
         logger.info(
             "Trainer initialized | strategy={} | epochs={} | batch_size={} | "
-            "lr={} | margin={} | device={}",
-            strategy, epochs, batch_size, learning_rate, margin, self.device,
+            "lr={} | margin={} | cutmix_prob={} | device={}",
+            strategy, epochs, batch_size, learning_rate, margin, cutmix_prob, self.device,
         )
 
     def train(self) -> dict:
@@ -129,6 +168,10 @@ class Trainer:
             anchor = anchor.to(self.device)
             positive = positive.to(self.device)
             negative = negative.to(self.device)
+
+            # Apply CutMix with probability cutmix_prob
+            if torch.rand(1).item() < self.cutmix_prob:
+                anchor = cutmix_batch(anchor)
 
             anchor_emb = self.model(anchor)
             positive_emb = self.model(positive)
@@ -209,6 +252,10 @@ class Trainer:
         for images, labels in progress:
             images = images.to(self.device)
             labels = labels.to(self.device)
+
+            # Apply CutMix with probability cutmix_prob
+            if torch.rand(1).item() < self.cutmix_prob:
+                images = cutmix_batch(images)
 
             embeddings = self.model(images)
 

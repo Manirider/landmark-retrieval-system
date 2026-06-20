@@ -13,7 +13,7 @@ from loguru import logger
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.models.mobilenet_embedding import MobileNetEmbedding
+from app.models.mobilenet_embedding import LandmarkEmbedding, BACKBONE_REGISTRY, MobileNetEmbedding
 from app.utils.metrics import evaluate_retrieval
 from app.utils.image_utils import get_inference_transforms
 from training.datasets import LandmarkDataset
@@ -95,6 +95,13 @@ def main() -> None:
         default="results",
         help="Directory to save evaluation reports",
     )
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="efficientnet_b3",
+        choices=list(BACKBONE_REGISTRY.keys()),
+        help="Backbone architecture to use",
+    )
 
     args = parser.parse_args()
 
@@ -107,7 +114,7 @@ def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info("Device: {}", device)
 
-    model = MobileNetEmbedding(embedding_dim=args.embedding_dim, pretrained=False)
+    model = LandmarkEmbedding(embedding_dim=args.embedding_dim, pretrained=False, backbone=args.backbone)
     model_path = Path(args.model_path)
 
     if model_path.exists():

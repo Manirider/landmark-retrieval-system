@@ -13,10 +13,12 @@ class ModelService:
         self,
         model_path: Path,
         embedding_dim: int = 128,
+        backbone: str = "efficientnet_b3",
         device: Optional[torch.device] = None,
     ) -> None:
         self.model_path = Path(model_path)
         self.embedding_dim = embedding_dim
+        self.backbone = backbone
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._model: Optional[MobileNetEmbedding] = None
 
@@ -24,6 +26,7 @@ class ModelService:
         self._model = MobileNetEmbedding(
             embedding_dim=self.embedding_dim,
             pretrained=True,
+            backbone=self.backbone,
         )
 
         if self.model_path.exists():

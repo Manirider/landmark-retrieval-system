@@ -4,8 +4,6 @@ A production-grade visual landmark retrieval system powered by **MobileNetV3 met
 
 Built with the same architectural patterns used in production visual search systems at scale — metric learning for embedding quality, approximate nearest neighbor search for speed, and a clean service-oriented API for deployment.
 
----
-
 ## Executive Summary
 
 This system solves the **landmark identification problem**: given a query image of a landmark (e.g., a tourist photo of the Eiffel Tower), identify which landmark it is from a database of known landmarks.
@@ -23,7 +21,6 @@ Key results:
 
 Hard negative mining improved Recall@1 by **+15.7%** over the random baseline.
 
----
 
 ## System Architecture
 
@@ -70,8 +67,6 @@ sequenceDiagram
     Retrieval-->>API: Top-5 results
     API-->>Client: JSON response
 ```
-
----
 
 ## Metric Learning Overview
 
@@ -130,7 +125,6 @@ graph TD
     end
 ```
 
----
 
 ## FAISS Explanation
 
@@ -142,7 +136,6 @@ graph TD
 | IndexIVFFlat | 100K-10M | O(√N) approx | ~95-99% |
 | IndexIVFPQ | 10M+ | O(√N) compressed | ~90-95% |
 
----
 
 ## Quick Start
 
@@ -221,8 +214,6 @@ curl -X POST http://localhost:8000/retrieve \
   -F "image=@path/to/landmark_photo.jpg"
 ```
 
----
-
 ## Docker Setup
 
 ### Build and Run
@@ -260,8 +251,6 @@ Key variables:
 | `TOP_K` | 5 | Number of results to return |
 | `EMBEDDING_DIM` | 128 | Embedding vector dimension |
 | `LOG_LEVEL` | INFO | Logging verbosity |
-
----
 
 ## API Usage
 
@@ -327,7 +316,6 @@ Once the server is running, visit:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
----
 
 ## Project Structure
 
@@ -396,7 +384,6 @@ landmark-retrieval-system/
 └── README.md                     # This file
 ```
 
----
 
 ## Results Analysis
 
@@ -415,7 +402,6 @@ landmark-retrieval-system/
 
 3. **Training dynamics differ significantly**. Random mining converges smoothly but plateaus early. Hard mining shows more loss variance (expected — hard triplets produce non-trivial gradients) but reaches a better final performance.
 
----
 
 ## Lessons Learned
 
@@ -427,7 +413,6 @@ landmark-retrieval-system/
 
 4. **MobileNetV3-Small is surprisingly capable.** Despite being ~10x smaller than ResNet-50, it achieves strong recall when paired with proper metric learning. The pretrained ImageNet features transfer well to landmark recognition.
 
----
 
 ## Future Improvements
 
@@ -439,7 +424,6 @@ landmark-retrieval-system/
 - **Model serving**: ONNX Runtime or TorchScript for optimized inference without full PyTorch overhead.
 - **Monitoring**: Prometheus metrics for latency percentiles, embedding drift detection, and index staleness alerts.
 
----
 
 ## Troubleshooting
 
@@ -497,7 +481,6 @@ curl http://localhost:8000/health
 curl -X POST http://localhost:8000/retrieve -F "image=@data/subset/test/10000/10000_0008.jpg"
 ```
 
----
 
 ## License
 

@@ -6,23 +6,55 @@ import torch.nn.functional as F
 from torchvision import models
 
 
-class MobileNetEmbedding(nn.Module):
+# Backbone registry: maps name -> (constructor, weights, output_features)
+BACKBONE_REGISTRY = {
+    "mobilenet_v3_small": {
+        "factory": models.mobilenet_v3_small,
+        "weights": models.MobileNet_V3_Small_Weights.IMAGENET1K_V1,
+        "out_features": 576,
+        "feature_attr": "features",
+    },
+    "efficientnet_b3": {
+        "factory": models.efficientnet_b3,
+        "weights": models.EfficientNet_B3_Weights.IMAGENET1K_V1,
+        "out_features": 1536,
+        "feature_attr": "features",
+    },
+}
+
+
+class LandmarkEmbedding(nn.Module):
+    """Backbone-agnostic embedding network for metric learning."""
+
     def __init__(
         self,
         embedding_dim: int = 128,
         pretrained: bool = True,
+        backbone: str = "efficientnet_b3",
+        freeze_backbone: bool = True,
     ) -> None:
         super().__init__()
 
         self.embedding_dim = embedding_dim
+        self.backbone_name = backbone
 
-        weights = models.MobileNet_V3_Small_Weights.IMAGENET1K_V1 if pretrained else None
-        backbone = models.mobilenet_v3_small(weights=weights)
+        if backbone not in BACKBONE_REGISTRY:
+            raise ValueError(
+                f"Unknown backbone '{backbone}'. "
+                f"Available: {list(BACKBONE_REGISTRY.keys())}"
+            )
 
-        self.features = backbone.features
+        config = BACKBONE_REGISTRY[backbone]
+        weights = config["weights"] if pretrained else None
+        backbone_model = config["factory"](weights=weights)
+
+        self.features = getattr(backbone_model, config["feature_attr"])
+        if freeze_backbone:
+            for param in self.features.parameters():
+                param.requires_grad = False
         self.avgpool = nn.AdaptiveAvgPool2d(1)
 
-        backbone_out_features = 576
+        backbone_out_features = config["out_features"]
 
         self.embedding_head = nn.Sequential(
             nn.Linear(backbone_out_features, 512),
@@ -61,18 +93,26 @@ class MobileNetEmbedding(nn.Module):
         return self.embedding_dim
 
 
+# Backward-compatible alias
+MobileNetEmbedding = LandmarkEmbedding
+
+
 def create_embedding_model(
     embedding_dim: int = 128,
     pretrained: bool = True,
+    backbone: str = "efficientnet_b3",
+    freeze_backbone: bool = True,
     checkpoint_path: Optional[str] = None,
     device: Optional[torch.device] = None,
-) -> MobileNetEmbedding:
+) -> LandmarkEmbedding:
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = MobileNetEmbedding(
+    model = LandmarkEmbedding(
         embedding_dim=embedding_dim,
         pretrained=pretrained,
+        backbone=backbone,
+        freeze_backbone=freeze_backbone,
     )
 
     if checkpoint_path is not None:

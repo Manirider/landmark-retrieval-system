@@ -23,6 +23,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     model_service = ModelService(
         model_path=model_path,
         embedding_dim=settings.embedding_dim,
+        backbone=settings.model_backbone,
     )
     model_service.load()
     app.state.model_service = model_service

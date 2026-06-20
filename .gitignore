@@ -49,3 +49,7 @@ htmlcov/
 # Distribution
 *.tar.gz
 *.whl
+
+# Backup artifacts
+artifacts_backup/
+

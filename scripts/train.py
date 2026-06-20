@@ -8,7 +8,7 @@ from loguru import logger
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.models.mobilenet_embedding import MobileNetEmbedding
+from app.models.mobilenet_embedding import LandmarkEmbedding, BACKBONE_REGISTRY
 from training.trainer import Trainer
 
 
@@ -66,6 +66,13 @@ def main() -> None:
         default="artifacts",
         help="Directory to save model checkpoints",
     )
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="efficientnet_b3",
+        choices=list(BACKBONE_REGISTRY.keys()),
+        help="Backbone architecture to use",
+    )
 
     args = parser.parse_args()
 
@@ -85,12 +92,13 @@ def main() -> None:
     logger.info("Learning rate: {}", args.learning_rate)
     logger.info("Margin:        {}", args.margin)
     logger.info("Train dir:     {}", args.train_dir)
-    logger.info("Save dir:      {}", args.save_dir)
+    logger.info("Backbone:      {}", args.backbone)
     logger.info("=" * 60)
 
-    model = MobileNetEmbedding(
+    model = LandmarkEmbedding(
         embedding_dim=args.embedding_dim,
         pretrained=True,
+        backbone=args.backbone,
     )
 
     trainer = Trainer(

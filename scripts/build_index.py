@@ -13,7 +13,7 @@ from loguru import logger
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.models.mobilenet_embedding import MobileNetEmbedding
+from app.models.mobilenet_embedding import LandmarkEmbedding, BACKBONE_REGISTRY
 from app.utils.image_utils import get_inference_transforms
 from app.utils.mapping_utils import save_id_mapping
 from training.datasets import LandmarkDataset
@@ -23,13 +23,14 @@ def build_index(
     model_path: str,
     data_dir: str,
     embedding_dim: int = 128,
+    backbone: str = "efficientnet_b3",
     batch_size: int = 32,
     output_dir: str = "artifacts",
 ) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info("Using device: {}", device)
 
-    model = MobileNetEmbedding(embedding_dim=embedding_dim, pretrained=False)
+    model = LandmarkEmbedding(embedding_dim=embedding_dim, pretrained=False, backbone=backbone)
     model_file = Path(model_path)
 
     if model_file.exists():
@@ -38,7 +39,7 @@ def build_index(
         logger.info("Loaded model from {}", model_file)
     else:
         logger.warning("Model not found at {} — using pretrained weights", model_file)
-        model = MobileNetEmbedding(embedding_dim=embedding_dim, pretrained=True)
+        model = LandmarkEmbedding(embedding_dim=embedding_dim, pretrained=True, backbone=backbone)
 
     model = model.to(device)
     model.eval()
@@ -135,6 +136,13 @@ def main() -> None:
         default="artifacts",
         help="Directory to save FAISS index and mapping",
     )
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="efficientnet_b3",
+        choices=list(BACKBONE_REGISTRY.keys()),
+        help="Backbone architecture to use",
+    )
 
     args = parser.parse_args()
 
@@ -148,6 +156,7 @@ def main() -> None:
         model_path=args.model_path,
         data_dir=args.data_dir,
         embedding_dim=args.embedding_dim,
+        backbone=args.backbone,
         batch_size=args.batch_size,
         output_dir=args.output_dir,
     )
